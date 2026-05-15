@@ -9,17 +9,21 @@
   <meta property="og:description" content="A distributional imitation learning approach that consistently improves over RLVR across scientific, mathematical, and coding reasoning." />
   <meta name="twitter:card" content="summary_large_image" />
 
-  <!-- KaTeX for math rendering -->
+  <!-- KaTeX — load synchronously so renderMathInElement is available on DOMContentLoaded -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
-    onload="renderMathInElement(document.body, {
-      delimiters: [
-        {left: '$$', right: '$$', display: true},
-        {left: '\\\\(', right: '\\\\)', display: false}
-      ],
-      throwOnError: false
-    });"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$",  right: "$$",  display: true  },
+          { left: "\\(", right: "\\)", display: false }
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -195,42 +199,29 @@
     .ph-label { font-size: .73rem; font-weight: 600; color: var(--ink-soft); text-align: center; }
     .ph-path { font-family: var(--mono); font-size: .67rem; color: var(--ink-muted); word-break: break-all; text-align: center; }
 
-    /* ─── Science 2×4 figure grid ───────────────────── */
+    /* ─── Science 2x4 figure grid ───────────────────── */
     .sci-fig-wrap { margin-top: 2rem; }
-
     .sci-fig-layout {
       display: grid;
       grid-template-columns: 52px 1fr;
       row-gap: 0.6rem;
       align-items: start;
     }
-
     .sci-row-label {
       display: flex; align-items: center; justify-content: center;
-      writing-mode: vertical-rl;
-      transform: rotate(180deg);
+      writing-mode: vertical-rl; transform: rotate(180deg);
       font-size: 0.72rem; font-weight: 700; letter-spacing: .07em;
       text-transform: uppercase; color: var(--ink-muted);
-      padding-bottom: 0.5rem; /* align with grid gap */
-      user-select: none;
+      padding-bottom: 0.5rem; user-select: none;
     }
-
     .sci-fig-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 0.55rem;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.55rem;
     }
-
     .sci-col-label {
       font-size: 0.74rem; font-weight: 600; text-align: center;
-      color: var(--ink-soft); margin-bottom: 0.3rem;
-      letter-spacing: .02em;
+      color: var(--ink-soft); margin-bottom: 0.3rem; letter-spacing: .02em;
     }
-
-    .sci-ph {
-      aspect-ratio: 4/3 !important;
-    }
-
+    .sci-ph { aspect-ratio: 4/3 !important; }
     @media (max-width: 680px) {
       .sci-fig-grid { grid-template-columns: repeat(2, 1fr); }
       .sci-fig-layout { grid-template-columns: 40px 1fr; }
@@ -316,7 +307,7 @@
 </head>
 <body>
 
-<!-- ══ NAV ═══════════════════════════════════════════ -->
+<!-- NAV -->
 <nav class="sticky-nav">
   <div class="container">
     <a class="nav-link" href="#abstract">Abstract</a>
@@ -329,10 +320,9 @@
   </div>
 </nav>
 
-<!-- ══ HEADER ════════════════════════════════════════ -->
+<!-- HEADER -->
 <header>
   <div class="container">
-
     <h1 class="paper-title fi d2">
       Reinforcement Learning from Rich Feedback<br>
       with <span class="accent">Distributional DAgger</span>
@@ -391,7 +381,7 @@
   </div>
 </header>
 
-<!-- ══ ABSTRACT ═══════════════════════════════════════ -->
+<!-- ABSTRACT -->
 <section id="abstract">
   <div class="container">
     <h2 class="section-title">Abstract</h2>
@@ -404,11 +394,11 @@
       imitation learning algorithm DAgger, where the learner has local access to an expert distribution
       on states visited by the current policy. This yields a simple forward cross-entropy objective that
       admits a blackbox expert and whose sequence-level gradient conducts rich credit assignment by
-      propagating future expert–student disagreement back to earlier decisions.
+      propagating future expert&ndash;student disagreement back to earlier decisions.
     </p>
     <br>
     <p class="abstract-text">
-      We show that prior RL with self-distillation objectives based on reverse KL or Jensen–Shannon fail
+      We show that prior RL with self-distillation objectives based on reverse KL or Jensen&ndash;Shannon fail
       to guarantee monotonic policy improvement: even when the expert has higher reward, their updates
       may increase probability on worse actions. In contrast, we show that forward cross-entropy admits
       <em>monotonic policy improvement</em> and enjoys guarantees on regret. We further show that our
@@ -421,7 +411,7 @@
   </div>
 </section>
 
-<!-- ══ METHOD ════════════════════════════════════════ -->
+<!-- METHOD -->
 <section id="method">
   <div class="container">
     <h2 class="section-title">Method</h2>
@@ -435,10 +425,11 @@
     <div class="math-block reveal">
       <div class="math-header">
         <span class="math-tag">DistIL Objective</span>
+        <span class="math-num">(Eq. 1)</span>
       </div>
       $$\mathcal{L}_{\mathrm{DistIL}}(\theta) \;:=\; \mathbb{E}_{x \sim \rho,\; y \sim \pi_\theta(\cdot \mid x)} \!\left[ \sum_{t=1}^{H} H^{\times}\!\Big( \mathsf{sg}\!\left(\pi_{\theta}(\cdot \mid x, y_{1:t-1}, f)\right),\; \pi_\theta(\cdot \mid x, y_{1:t-1}) \Big) \right]$$
       <p class="math-desc">
-        Here \(H^{\times}(p,q)=-\mathbb{E}_{a\sim p}[\log q(a)]\) is the cross-entropy,
+        Here \(H^{\times}(p,q) = -\mathbb{E}_{a \sim p}[\log q(a)]\) is the cross-entropy,
         \(\mathsf{sg}(\cdot)\) denotes stop-gradient, \(f\) is the rich feedback signal
         (e.g. execution trace, tool output, or self-evaluation), and \(H\) is the rollout horizon.
         The expert \(\mathsf{sg}(\pi_\theta(\cdot \mid x, y_{1:t-1}, f))\) is accessed as a
@@ -450,29 +441,30 @@
     <p class="section-intro">
       The sequence-level gradient of \(\mathcal{L}_{\mathrm{DistIL}}\) decomposes into a
       <em>local</em> term (dense token-wise supervision, as in prior self-distillation methods)
-      and a novel <em>future-credit</em> term that propagates downstream expert–student disagreement
-      back to earlier decisions — enabling the model to learn that a bad early token choice leads to
+      and a novel <em>future-credit</em> term that propagates downstream expert&ndash;student disagreement
+      back to earlier decisions &mdash; enabling the model to learn that a bad early token choice leads to
       worse futures.
     </p>
 
     <div class="math-block reveal">
       <div class="math-header">
         <span class="math-tag">Policy Gradient Decomposition</span>
+        <span class="math-num">(Eq. 2)</span>
       </div>
       $$\nabla_\theta \mathcal{L}_{\mathrm{DistIL}} \;=\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_t, f)\big),\; \pi_\theta(\cdot \mid s_t) \Big) \right] }_{\text{local credit assignment}} \;+\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta \log \pi_\theta(a_t \mid s_t) \!\left( \sum_{i > t} H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_i, f)\big),\; \pi_\theta(\cdot \mid s_i) \Big) \right) \right] }_{\text{future-credit assignment}}$$
       <p class="math-desc">
         where \(s_t = (x, y_{1:t-1})\). The <em>local</em> term mirrors the gradient of SDPO/OPSD
         and provides dense per-token supervision. The <em>future-credit</em> term is unique to
-        DistIL: it weights \(\log\pi_\theta(a_t\mid s_t)\) by cumulative expert–student cross-entropy
-        at all later steps \(i&gt;t\), propagating the cost of disagreement back through time.
-        Prior methods based on reverse KL or Jensen–Shannon lack this term and cannot guarantee
+        DistIL: it weights \(\log\pi_\theta(a_t\mid s_t)\) by cumulative expert&ndash;student cross-entropy
+        at all later steps \(i > t\), propagating the cost of disagreement back through time.
+        Prior methods based on reverse KL or Jensen&ndash;Shannon lack this term and cannot guarantee
         monotonic policy improvement.
       </p>
     </div>
   </div>
 </section>
 
-<!-- ══ SCIENCE ════════════════════════════════════════ -->
+<!-- SCIENCE -->
 <section id="science">
   <div class="container">
     <h2 class="section-title">Learning under Sparse Feedback: Science</h2>
@@ -502,7 +494,6 @@
           </tr>
         </thead>
         <tbody>
-          <!-- Qwen3-8B -->
           <tr>
             <td class="td-l" style="font-weight:700;color:var(--ink)">Qwen3-8B</td>
             <td colspan="2" class="base col-l">41.2</td>
@@ -543,7 +534,6 @@
             <td class="col-l best">74.9</td><td class="sec">76.2</td>
             <td class="col-l best">69.2</td><td class="best">76.1</td>
           </tr>
-          <!-- Olmo3-7B -->
           <tr class="sep">
             <td class="td-l" style="font-weight:700;color:var(--ink)">Olmo3-7B-Instruct</td>
             <td colspan="2" class="base col-l">22.8</td>
@@ -593,16 +583,11 @@
       Average is computed over all four domains.
     </p>
 
-    <!-- 2×4 training-curve figure grid -->
+    <!-- 2x4 training-curve figure grid -->
     <div class="sci-fig-wrap reveal">
-
-      <!-- Row labels + grid -->
       <div class="sci-fig-layout">
-
         <!-- Row 1: Best@16 -->
-        <div class="sci-row-label">
-          <span>Best@16</span>
-        </div>
+        <div class="sci-row-label"><span>Best@16</span></div>
         <div class="sci-fig-grid">
           <div class="fig-item">
             <div class="sci-col-label">Biology</div>
@@ -633,11 +618,8 @@
             </div>
           </div>
         </div>
-
         <!-- Row 2: Maj@16 -->
-        <div class="sci-row-label">
-          <span>Maj@16</span>
-        </div>
+        <div class="sci-row-label"><span>Maj@16</span></div>
         <div class="sci-fig-grid">
           <div class="fig-item">
             <div class="ph sci-ph">
@@ -664,22 +646,20 @@
             </div>
           </div>
         </div>
-
-      </div><!-- /.sci-fig-layout -->
-
+      </div>
       <p class="tbl-cap" style="margin-top:.85rem">
         <strong>Figure 2.</strong> Validation Best@16 (top) and Maj@16 (bottom) of SDPO and
         DistIL (Ours) across four scientific reasoning domains on Qwen3-8B, plotted against
         training step. DistIL consistently outperforms SDPO on both metrics across all domains,
         with gains emerging within the first ~20 steps and sustained throughout training.
-        SDPO exhibits instability under extended training — notably, Best@16 collapses on biology
-        after step 100 and oscillates on chemistry and physics — while DistIL's curves remain smooth.
+        SDPO exhibits instability under extended training &mdash; notably, Best@16 collapses on biology
+        after step 100 and oscillates on chemistry and physics &mdash; while DistIL's curves remain smooth.
       </p>
-    </div><!-- /.sci-fig-wrap -->
+    </div>
   </div>
 </section>
 
-<!-- ══ CODING ═════════════════════════════════════════ -->
+<!-- CODING -->
 <section id="coding">
   <div class="container">
     <h2 class="section-title">Learning with Rich Environment Feedback: Coding</h2>
@@ -694,34 +674,34 @@
       <div class="fig-item">
         <div class="ph">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span class="ph-label">LCB Score · Maj@k</span>
+          <span class="ph-label">LCB Score &middot; Maj@k</span>
           <span class="ph-path">plots/lcb_score_majk_temp0p2.png</span>
         </div>
-        <p class="fig-cap"><strong>Score · Maj@k,</strong> &tau; = 0.2</p>
+        <p class="fig-cap"><strong>Score &middot; Maj@k,</strong> &tau; = 0.2</p>
       </div>
       <div class="fig-item">
         <div class="ph">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span class="ph-label">LCB Score · Best@k</span>
+          <span class="ph-label">LCB Score &middot; Best@k</span>
           <span class="ph-path">plots/lcb_score_bestk_temp0p2.png</span>
         </div>
-        <p class="fig-cap"><strong>Score · Best@k,</strong> &tau; = 0.2</p>
+        <p class="fig-cap"><strong>Score &middot; Best@k,</strong> &tau; = 0.2</p>
       </div>
       <div class="fig-item">
         <div class="ph">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span class="ph-label">LCB Accuracy · Maj@k</span>
+          <span class="ph-label">LCB Accuracy &middot; Maj@k</span>
           <span class="ph-path">plots/lcb_acc_majk_temp0p2.png</span>
         </div>
-        <p class="fig-cap"><strong>Accuracy · Maj@k,</strong> &tau; = 0.2</p>
+        <p class="fig-cap"><strong>Accuracy &middot; Maj@k,</strong> &tau; = 0.2</p>
       </div>
       <div class="fig-item">
         <div class="ph">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span class="ph-label">LCB Accuracy · Best@k</span>
+          <span class="ph-label">LCB Accuracy &middot; Best@k</span>
           <span class="ph-path">plots/lcb_acc_bestk_temp0p2.png</span>
         </div>
-        <p class="fig-cap"><strong>Accuracy · Best@k,</strong> &tau; = 0.2</p>
+        <p class="fig-cap"><strong>Accuracy &middot; Best@k,</strong> &tau; = 0.2</p>
       </div>
     </div>
     <p class="tbl-cap reveal" style="margin-top:.9rem">
@@ -731,7 +711,7 @@
   </div>
 </section>
 
-<!-- ══ MATH ══════════════════════════════════════════ -->
+<!-- MATH -->
 <section id="math">
   <div class="container">
     <h2 class="section-title">Learning to Solve Very Hard Mathematical Reasoning Problems</h2>
@@ -762,7 +742,6 @@
           </tr>
         </thead>
         <tbody>
-          <!-- Qwen3-4B -->
           <tr>
             <td class="td-l grp" rowspan="6">Qwen3-4B</td>
             <td class="td-l">Base</td>
@@ -812,7 +791,6 @@
             <td class="col-l best">94.8</td><td class="best">100.0</td>
             <td class="col-l best">44.2</td><td class="best">52.9</td>
           </tr>
-          <!-- Qwen3-8B -->
           <tr class="sep">
             <td class="td-l grp" rowspan="6">Qwen3-8B</td>
             <td class="td-l">Base</td>
@@ -872,7 +850,7 @@
   </div>
 </section>
 
-<!-- ══ ABLATION ══════════════════════════════════════ -->
+<!-- ABLATION -->
 <section id="ablation">
   <div class="container">
     <h2 class="section-title">Ablation Study</h2>
@@ -886,11 +864,11 @@
       <div class="fig-item">
         <div class="ph" style="aspect-ratio:4/3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span class="ph-label">DistIL vs. CE — Credit Assignment</span>
+          <span class="ph-label">DistIL vs. CE &mdash; Credit Assignment</span>
           <span class="ph-path">plots/science/CE_vs_DistIL_Material_Ablation.png</span>
         </div>
         <p class="fig-cap">
-          <strong>Figure 2.</strong> DistIL vs. CE on Materials benchmark.
+          <strong>Figure 3.</strong> DistIL vs. CE on Materials benchmark.
           CE does local token-wise credit assignment only; DistIL adds full future-credit propagation
           as given in Eq. 2.
         </p>
@@ -898,11 +876,11 @@
       <div class="fig-item">
         <div class="ph" style="aspect-ratio:4/3">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
-          <span class="ph-label">Top-k Ablation · Physics</span>
+          <span class="ph-label">Top-k Ablation &middot; Physics</span>
           <span class="ph-path">plots/science/DistIL_topk_Physics_Ablation.png</span>
         </div>
         <p class="fig-cap">
-          <strong>Figure 3.</strong> Avg@16 on Physics benchmark as a function of the number
+          <strong>Figure 4.</strong> Avg@16 on Physics benchmark as a function of the number
           of top-\(k\) tokens used during DistIL training on the Materials benchmark.
         </p>
       </div>
@@ -910,25 +888,25 @@
   </div>
 </section>
 
-<!-- ══ BIBTEX ════════════════════════════════════════ -->
+<!-- BIBTEX -->
 <section id="bibtex">
   <div class="container">
     <h2 class="section-title">BibTeX</h2>
     <p class="section-intro">Our paper will appear on arXiv soon. The entry below will be updated upon release.</p>
     <div class="bib" id="bibtex-raw"><button class="copy-btn" id="copy-btn" onclick="copyBib()">Copy</button><span class="bc">% To be updated upon arXiv release</span>
-<span class="bk">@misc</span>{<span class="bv">agrawal2025distil</span>,
+<span class="bk">@misc</span>{<span class="bv">TBA</span>,
   <span class="bf">title</span>         = {<span class="bv">Reinforcement Learning from Rich Feedback with Distributional DAgger</span>},
   <span class="bf">author</span>        = {<span class="bv">Rishabh Agrawal and Jacob Fein-Ashley and Paria Rashidinejad</span>},
-  <span class="bf">year</span>          = {<span class="bv">2025</span>},
-  <span class="bf">eprint</span>        = {<span class="bv">TODO</span>},
+  <span class="bf">year</span>          = {<span class="bv">2026</span>},
+  <span class="bf">eprint</span>        = {<span class="bv">TBA</span>},
   <span class="bf">archivePrefix</span> = {<span class="bv">arXiv</span>},
   <span class="bf">primaryClass</span>  = {<span class="bv">cs.LG</span>},
-  <span class="bf">url</span>           = {<span class="bv">https://distil.github.io</span>},
+  <span class="bf">url</span>           = {<span class="bv">https://rishabha-1086.github.io/distil</span>},
 }</div>
   </div>
 </section>
 
-<!-- ══ FOOTER ════════════════════════════════════════ -->
+<!-- FOOTER -->
 <footer>
   <div class="container">
     <p>
