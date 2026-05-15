@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DistIL: Reinforcement Learning from Rich Feedback with Distributional DAgger</title>
+  <meta name="description" content="DistIL introduces a distributional variant of DAgger for RL from rich feedback, yielding forward cross-entropy objectives with monotonic policy improvement guarantees." />
+  <meta property="og:title" content="DistIL: RL from Rich Feedback with Distributional DAgger" />
+  <meta property="og:description" content="A distributional imitation learning approach that consistently improves over RLVR across scientific, mathematical, and coding reasoning." />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '\\\\(', right: '\\\\)', display: false}
+      ],
+      throwOnError: false
+    });"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..900;1,8..60,300..900&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ─── Tokens ─────────────────────────────────────── */
+    :root {
+      --blue:       #2563eb;
+      --blue-dark:  #1d4ed8;
+      --blue-light: #eff6ff;
+      --blue-mid:   #bfdbfe;
+      --ink:        #0f172a;
+      --ink-soft:   #334155;
+      --ink-muted:  #64748b;
+      --border:     #e2e8f0;
+      --bg:         #ffffff;
+      --bg-alt:     #f8fafc;
+      --radius:     10px;
+      --serif:      'Source Serif 4', Georgia, serif;
+      --sans:       'DM Sans', system-ui, sans-serif;
+      --mono:       'JetBrains Mono', monospace;
+      --max-w:      840px;
+      --gap:        3.5rem;
+    }
+
+    /* ─── Reset ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--sans);
+      font-size: 1.0625rem; line-height: 1.75;
+      color: var(--ink); background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    img { max-width: 100%; height: auto; display: block; }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ─── Layout ─────────────────────────────────────── */
+    .container { max-width: var(--max-w); margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: var(--gap) 0; }
+    section + section { border-top: 1px solid var(--border); }
+
+    /* ─── Sticky nav ─────────────────────────────────── */
+    .sticky-nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,0.93);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.45rem 0;
+    }
+    .sticky-nav .container { display: flex; gap: 0.15rem; justify-content: center; flex-wrap: wrap; }
+    .nav-link {
+      font-size: 0.8rem; font-weight: 600; color: var(--ink-muted);
+      padding: 0.3rem 0.7rem; border-radius: 6px;
+      transition: background .12s, color .12s;
+    }
+    .nav-link:hover { background: var(--blue-light); color: var(--blue); text-decoration: none; }
+
+    /* ─── Header ─────────────────────────────────────── */
+    header {
+      background: linear-gradient(155deg, #f0f7ff 0%, #fafcff 55%, #fff 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 3.25rem 0 2.5rem; text-align: center;
+    }
+    .venue-badge {
+      display: inline-block;
+      background: var(--blue-light); border: 1px solid var(--blue-mid); color: var(--blue-dark);
+      font-size: 0.75rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+      padding: .22rem .85rem; border-radius: 999px; margin-bottom: 1.1rem;
+    }
+    h1.paper-title {
+      font-family: var(--serif);
+      font-size: clamp(1.6rem, 3.8vw, 2.45rem);
+      font-weight: 700; line-height: 1.25;
+      color: var(--ink); letter-spacing: -.02em; margin-bottom: 1.6rem;
+    }
+    h1.paper-title .accent { color: var(--blue); }
+
+    /* Authors */
+    .authors { display: flex; flex-wrap: wrap; justify-content: center; gap: .2rem 1.5rem; margin-bottom: .55rem; }
+    .author { display: flex; align-items: center; gap: .35rem; font-size: .98rem; font-weight: 500; }
+    .author a { color: var(--ink); font-weight: 600; }
+    .author a:hover { color: var(--blue); }
+    .author-icons { display: flex; gap: .2rem; }
+    .author-icons a { display: flex; align-items: center; color: var(--ink-muted); transition: color .15s; }
+    .author-icons a:hover { color: var(--blue); text-decoration: none; }
+    .author-icons svg { width: 14px; height: 14px; }
+
+    .affiliation { font-size: .9rem; color: var(--ink-muted); margin-bottom: 1.6rem; }
+    .affiliation strong { color: var(--ink-soft); font-weight: 500; }
+
+    /* Buttons */
+    .link-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: .55rem; }
+    .btn {
+      display: inline-flex; align-items: center; gap: .42rem;
+      padding: .48rem 1.05rem; border-radius: 8px; font-size: .88rem; font-weight: 600;
+      border: 1.5px solid var(--border); background: var(--bg); color: var(--ink);
+      transition: border-color .14s, background .14s, color .14s, box-shadow .14s;
+    }
+    .btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); text-decoration: none; box-shadow: 0 2px 8px rgba(37,99,235,.1); }
+    .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .btn-primary:hover { background: var(--blue-dark); border-color: var(--blue-dark); color: #fff; }
+    .btn-disabled { opacity: .55; cursor: default; pointer-events: none; }
+    .btn svg { flex-shrink: 0; width: 15px; height: 15px; }
+
+    /* ─── Headings ───────────────────────────────────── */
+    h2.section-title {
+      font-family: var(--serif);
+      font-size: 1.5rem; font-weight: 700; color: var(--ink); letter-spacing: -.01em;
+      margin-bottom: .9rem;
+    }
+    h3.sub-title {
+      font-family: var(--serif);
+      font-size: 1.1rem; font-weight: 700; color: var(--ink-soft);
+      margin: 2rem 0 .7rem; padding-bottom: .4rem; border-bottom: 1px solid var(--border);
+    }
+    .section-intro { font-size: .97rem; color: var(--ink-soft); margin-bottom: 1.4rem; line-height: 1.7; }
+
+    /* ─── Abstract ───────────────────────────────────── */
+    .abstract-text { font-family: var(--serif); font-size: 1.05rem; line-height: 1.88; color: var(--ink-soft); }
+    .abstract-text em { font-style: italic; color: var(--ink); }
+
+    /* ─── Highlight box ──────────────────────────────── */
+    .callout {
+      background: var(--blue-light); border-left: 3px solid var(--blue);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      padding: .9rem 1.2rem; margin: 1.4rem 0;
+      font-size: .94rem; color: var(--ink-soft); line-height: 1.65;
+    }
+    .callout strong { color: var(--blue-dark); }
+
+    /* ─── Math blocks ────────────────────────────────── */
+    .math-block {
+      background: var(--bg-alt); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.4rem 1.6rem;
+      margin: 1.4rem 0; overflow-x: auto;
+    }
+    .math-block .katex-display { margin: 0; }
+    .math-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .65rem; }
+    .math-tag { font-size: .75rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-muted); }
+    .math-num { font-size: .8rem; color: var(--ink-muted); }
+    .math-desc { margin-top: .9rem; font-size: .92rem; color: var(--ink-soft); line-height: 1.65; }
+
+    /* ─── Figures ────────────────────────────────────── */
+    .fig-grid { display: grid; gap: 1.4rem; }
+    .fig-4col { grid-template-columns: repeat(4, 1fr); }
+    .fig-2col { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 680px) { .fig-4col { grid-template-columns: repeat(2,1fr) } .fig-2col { grid-template-columns: 1fr } }
+    @media (max-width: 400px) { .fig-4col { grid-template-columns: 1fr } }
+
+    .fig-item img {
+      border-radius: var(--radius); border: 1px solid var(--border);
+      box-shadow: 0 2px 10px rgba(15,23,42,.06); width: 100%;
+    }
+    .fig-cap {
+      margin-top: .55rem; font-size: .84rem;
+      color: var(--ink-muted); line-height: 1.5; text-align: center;
+    }
+    .fig-cap strong { color: var(--ink); font-weight: 600; }
+
+    /* Placeholder */
+    .ph {
+      width: 100%; aspect-ratio: 5/4;
+      background: var(--bg-alt); border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: .35rem; padding: .75rem;
+    }
+    .ph svg { width: 20px; height: 20px; opacity: .35; }
+    .ph-label { font-size: .73rem; font-weight: 600; color: var(--ink-soft); text-align: center; }
+    .ph-path { font-family: var(--mono); font-size: .67rem; color: var(--ink-muted); word-break: break-all; text-align: center; }
+
+    /* ─── Science 2×4 figure grid ───────────────────── */
+    .sci-fig-wrap { margin-top: 2rem; }
+
+    .sci-fig-layout {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      row-gap: 0.6rem;
+      align-items: start;
+    }
+
+    .sci-row-label {
+      display: flex; align-items: center; justify-content: center;
+      writing-mode: vertical-rl;
+      transform: rotate(180deg);
+      font-size: 0.72rem; font-weight: 700; letter-spacing: .07em;
+      text-transform: uppercase; color: var(--ink-muted);
+      padding-bottom: 0.5rem; /* align with grid gap */
+      user-select: none;
+    }
+
+    .sci-fig-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.55rem;
+    }
+
+    .sci-col-label {
+      font-size: 0.74rem; font-weight: 600; text-align: center;
+      color: var(--ink-soft); margin-bottom: 0.3rem;
+      letter-spacing: .02em;
+    }
+
+    .sci-ph {
+      aspect-ratio: 4/3 !important;
+    }
+
+    @media (max-width: 680px) {
+      .sci-fig-grid { grid-template-columns: repeat(2, 1fr); }
+      .sci-fig-layout { grid-template-columns: 40px 1fr; }
+    }
+    @media (max-width: 400px) {
+      .sci-fig-grid { grid-template-columns: 1fr; }
+      .sci-row-label { writing-mode: horizontal-tb; transform: none; padding-bottom: 0; }
+      .sci-fig-layout { grid-template-columns: 1fr; row-gap: 0.3rem; }
+    }
+
+    /* ─── Tables ─────────────────────────────────────── */
+    .tbl-wrap {
+      overflow-x: auto; border: 1px solid var(--border);
+      border-radius: var(--radius); margin-top: 1.1rem;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: .845rem; white-space: nowrap; }
+    thead th {
+      background: var(--bg-alt); font-weight: 600; font-size: .75rem;
+      letter-spacing: .035em; text-transform: uppercase; color: var(--ink-muted);
+      padding: .6rem .75rem; border-bottom: 1px solid var(--border); text-align: center;
+    }
+    thead th.th-l { text-align: left; }
+    .subrow th {
+      font-size: .7rem; font-weight: 500; text-transform: none; letter-spacing: .015em;
+      color: var(--ink-muted); background: var(--bg-alt); border-bottom: 1px solid var(--border);
+    }
+    tbody td {
+      padding: .55rem .75rem; border-bottom: 1px solid var(--border);
+      color: var(--ink-soft); text-align: center; vertical-align: middle;
+    }
+    tbody td.td-l { text-align: left; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f0f7ff; }
+    .sep td { border-top: 2px solid var(--border); }
+    .grp { font-weight: 700; color: var(--blue); border-right: 1px solid var(--border); vertical-align: middle !important; }
+    .col-l { border-left: 1.5px solid var(--border); }
+    .mn td.td-l em { font-style: normal; font-size: .78em; color: var(--ink-muted); }
+    .best { font-weight: 800; color: var(--ink); }
+    .sec { text-decoration: underline; text-decoration-thickness: 1.5px; }
+    .base { color: var(--ink-muted); }
+    tr.ours td { background: #f0f7ff; }
+    tr.ours:hover td { background: #dbeafe; }
+    tr.ours td.td-l { color: var(--blue); font-weight: 700; }
+
+    .tbl-cap { margin-top: .7rem; font-size: .83rem; color: var(--ink-muted); line-height: 1.55; }
+    .tbl-cap strong { color: var(--ink-soft); }
+
+    /* ─── BibTeX ─────────────────────────────────────── */
+    .bib {
+      position: relative; background: var(--bg-alt); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.2rem 1.35rem;
+      font-family: var(--mono); font-size: .82rem; line-height: 1.75;
+      color: var(--ink-soft); overflow-x: auto; white-space: pre;
+    }
+    .bk { color: var(--blue); } .bf { color: #0f766e; } .bv { color: #7c3aed; }
+    .bc { color: var(--ink-muted); font-style: italic; }
+    .copy-btn {
+      position: absolute; top: .7rem; right: .7rem;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: .28rem .6rem; font-size: .77rem; font-family: var(--sans); font-weight: 600;
+      color: var(--ink-muted); cursor: pointer; transition: all .14s;
+    }
+    .copy-btn:hover { border-color: var(--blue); color: var(--blue); }
+    .copy-btn.ok { border-color: #16a34a; color: #16a34a; }
+
+    /* ─── Footer ─────────────────────────────────────── */
+    footer {
+      background: var(--bg-alt); border-top: 1px solid var(--border);
+      padding: 2rem 0; text-align: center;
+      font-size: .84rem; color: var(--ink-muted); line-height: 1.7;
+    }
+    footer a { color: var(--ink-soft); }
+    footer a:hover { color: var(--blue); }
+
+    /* ─── Animations ─────────────────────────────────── */
+    @keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+    .fi { opacity:0; animation: fadeUp .5s ease forwards; }
+    .d1{animation-delay:.05s} .d2{animation-delay:.12s} .d3{animation-delay:.19s}
+    .d4{animation-delay:.26s} .d5{animation-delay:.33s}
+    .reveal { opacity:0; transform:translateY(18px); transition: opacity .5s ease, transform .5s ease; }
+    .reveal.vis { opacity:1; transform:none; }
+  </style>
+</head>
+<body>
+
+<!-- ══ NAV ═══════════════════════════════════════════ -->
+<nav class="sticky-nav">
+  <div class="container">
+    <a class="nav-link" href="#abstract">Abstract</a>
+    <a class="nav-link" href="#method">Method</a>
+    <a class="nav-link" href="#science">Science</a>
+    <a class="nav-link" href="#coding">Coding</a>
+    <a class="nav-link" href="#math">Math</a>
+    <a class="nav-link" href="#ablation">Ablation</a>
+    <a class="nav-link" href="#bibtex">BibTeX</a>
+  </div>
+</nav>
+
+<!-- ══ HEADER ════════════════════════════════════════ -->
+<header>
+  <div class="container">
+    <span class="venue-badge fi d1">Preprint 2025</span>
+
+    <h1 class="paper-title fi d2">
+      Reinforcement Learning from Rich Feedback<br>
+      with <span class="accent">Distributional DAgger</span>
+    </h1>
+
+    <div class="authors fi d3">
+      <div class="author">
+        <a href="#" target="_blank" rel="noopener">Rishabh Agrawal</a>
+        <div class="author-icons">
+          <a href="mailto:" title="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="author">
+        <a href="https://jacobfa.github.io" target="_blank" rel="noopener">Jacob Fein-Ashley</a>
+        <div class="author-icons">
+          <a href="https://x.com/jacobfeinashley" target="_blank" rel="noopener" title="X">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.256 5.627 5.908-5.627zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="mailto:feinashl@usc.edu" title="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="author">
+        <a href="https://pariard.github.io" target="_blank" rel="noopener">Paria Rashidinejad</a>
+        <div class="author-icons">
+          <a href="https://x.com/paria_rd" target="_blank" rel="noopener" title="X">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.256 5.627 5.908-5.627zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="mailto:paria.rashidinejad@usc.edu" title="Email">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="affiliation fi d3">
+      <strong>University of Southern California</strong>
+    </div>
+
+    <div class="link-buttons fi d4">
+      <a class="btn btn-primary btn-disabled" href="#" aria-disabled="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        arXiv (coming soon)
+      </a>
+      <a class="btn btn-disabled" href="#" aria-disabled="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        Code (coming soon)
+      </a>
+    </div>
+  </div>
+</header>
+
+<!-- ══ ABSTRACT ═══════════════════════════════════════ -->
+<section id="abstract">
+  <div class="container">
+    <h2 class="section-title">Abstract</h2>
+    <p class="abstract-text">
+      Reasoning models have advanced rapidly, but the dominant reinforcement learning from verifiable
+      rewards (RLVR) recipe remains surprisingly narrow: sample many responses and reward each with a
+      single bit indicating whether the final answer is correct. Yet many settings provide
+      <em>rich feedback</em>, including execution traces, tool outputs, expert corrections, and model
+      self-evaluations. We study how to use such feedback through a distributional variant of the classic
+      imitation learning algorithm DAgger, where the learner has local access to an expert distribution
+      on states visited by the current policy. This yields a simple forward cross-entropy objective that
+      admits a blackbox expert and whose sequence-level gradient conducts rich credit assignment by
+      propagating future expert–student disagreement back to earlier decisions.
+    </p>
+    <br>
+    <p class="abstract-text">
+      We show that prior RL with self-distillation objectives based on reverse KL or Jensen–Shannon fail
+      to guarantee monotonic policy improvement: even when the expert has higher reward, their updates
+      may increase probability on worse actions. In contrast, we show that forward cross-entropy admits
+      <em>monotonic policy improvement</em> and enjoys guarantees on regret. We further show that our
+      objective optimizes a teacher-weighted maximum-likelihood RL lower bound, leading to improved Pass@N.
+    </p>
+    <div class="callout reveal">
+      <strong>DistIL</strong> consistently improves over RLVR and RL with self-distillation baselines
+      across scientific reasoning, mathematical reasoning, and coding.
+    </div>
+  </div>
+</section>
+
+<!-- ══ METHOD ════════════════════════════════════════ -->
+<section id="method">
+  <div class="container">
+    <h2 class="section-title">Method</h2>
+    <p class="section-intro">
+      DistIL minimizes a forward cross-entropy between a stop-gradient expert conditional distribution
+      (conditioned on feedback \(f\)) and the current policy, summed over all time steps of a sampled
+      rollout. This replaces scalar reward signals with token-level distributional supervision while
+      remaining compatible with any blackbox feedback source.
+    </p>
+
+    <div class="math-block reveal">
+      <div class="math-header">
+        <span class="math-tag">DistIL Objective</span>
+        <span class="math-num">(Eq. 1)</span>
+      </div>
+      $$\mathcal{L}_{\mathrm{DistIL}}(\theta) \;:=\; \mathbb{E}_{x \sim \rho,\; y \sim \pi_\theta(\cdot \mid x)} \!\left[ \sum_{t=1}^{H} H^{\times}\!\Big( \mathsf{sg}\!\left(\pi_{\theta}(\cdot \mid x, y_{1:t-1}, f)\right),\; \pi_\theta(\cdot \mid x, y_{1:t-1}) \Big) \right]$$
+      <p class="math-desc">
+        Here \(H^{\times}(p,q)=-\mathbb{E}_{a\sim p}[\log q(a)]\) is the cross-entropy,
+        \(\mathsf{sg}(\cdot)\) denotes stop-gradient, \(f\) is the rich feedback signal
+        (e.g. execution trace, tool output, or self-evaluation), and \(H\) is the rollout horizon.
+        The expert \(\mathsf{sg}(\pi_\theta(\cdot \mid x, y_{1:t-1}, f))\) is accessed as a
+        <em>blackbox</em>: any feedback-conditioned model may serve as the expert.
+      </p>
+    </div>
+
+    <h3 class="sub-title">Rich Credit Assignment via Future-Credit Propagation</h3>
+    <p class="section-intro">
+      The sequence-level gradient of \(\mathcal{L}_{\mathrm{DistIL}}\) decomposes into a
+      <em>local</em> term (dense token-wise supervision, as in prior self-distillation methods)
+      and a novel <em>future-credit</em> term that propagates downstream expert–student disagreement
+      back to earlier decisions — enabling the model to learn that a bad early token choice leads to
+      worse futures.
+    </p>
+
+    <div class="math-block reveal">
+      <div class="math-header">
+        <span class="math-tag">Policy Gradient Decomposition</span>
+        <span class="math-num">(Eq. 2)</span>
+      </div>
+      $$\nabla_\theta \mathcal{L}_{\mathrm{DistIL}} \;=\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_t, f)\big),\; \pi_\theta(\cdot \mid s_t) \Big) \right] }_{\text{local credit assignment}} \;+\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta \log \pi_\theta(a_t \mid s_t) \!\left( \sum_{i > t} H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_i, f)\big),\; \pi_\theta(\cdot \mid s_i) \Big) \right) \right] }_{\text{future-credit assignment}}$$
+      <p class="math-desc">
+        where \(s_t = (x, y_{1:t-1})\). The <em>local</em> term mirrors the gradient of SDPO/OPSD
+        and provides dense per-token supervision. The <em>future-credit</em> term is unique to
+        DistIL: it weights \(\log\pi_\theta(a_t\mid s_t)\) by cumulative expert–student cross-entropy
+        at all later steps \(i&gt;t\), propagating the cost of disagreement back through time.
+        Prior methods based on reverse KL or Jensen–Shannon lack this term and cannot guarantee
+        monotonic policy improvement.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ SCIENCE ════════════════════════════════════════ -->
+<section id="science">
+  <div class="container">
+    <h2 class="section-title">Learning under Sparse Feedback: Science</h2>
+    <p class="section-intro">
+      We evaluate on SciKnowEval L3 across four scientific domains (Chemistry, Physics, Biology,
+      Materials), reporting best avg@16 within 1h and 5h of wall-clock training on 4&times; NVIDIA
+      H200 GPUs. <strong>Bold</strong> = best; <span style="text-decoration:underline">underline</span> = second best per column.
+    </p>
+
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th class="th-l" rowspan="2" style="min-width:160px">Method</th>
+            <th colspan="2" class="col-l">Chemistry</th>
+            <th colspan="2" class="col-l">Physics</th>
+            <th colspan="2" class="col-l">Biology</th>
+            <th colspan="2" class="col-l">Materials</th>
+            <th colspan="2" class="col-l">Average</th>
+          </tr>
+          <tr class="subrow">
+            <th class="col-l">1h</th><th>5h</th>
+            <th class="col-l">1h</th><th>5h</th>
+            <th class="col-l">1h</th><th>5h</th>
+            <th class="col-l">1h</th><th>5h</th>
+            <th class="col-l">1h</th><th>5h</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Qwen3-8B -->
+          <tr>
+            <td class="td-l" style="font-weight:700;color:var(--ink)">Qwen3-8B</td>
+            <td colspan="2" class="base col-l">41.2</td>
+            <td colspan="2" class="base col-l">59.2</td>
+            <td colspan="2" class="base col-l">30.8</td>
+            <td colspan="2" class="base col-l">58.9</td>
+            <td colspan="2" class="base col-l">47.5</td>
+          </tr>
+          <tr class="mn">
+            <td class="td-l">&nbsp;&nbsp;+ GRPO <em>(off-policy)</em></td>
+            <td class="col-l">65.9</td><td>74.5</td>
+            <td class="col-l">63.8</td><td class="sec">72.7</td>
+            <td class="col-l">35.1</td><td>59.9</td>
+            <td class="col-l sec">74.3</td><td class="best">77.1</td>
+            <td class="col-l">59.8</td><td>71.1</td>
+          </tr>
+          <tr class="mn">
+            <td class="td-l">&nbsp;&nbsp;+ GRPO <em>(on-policy)</em></td>
+            <td class="col-l">63.3</td><td>63.4</td>
+            <td class="col-l">63.6</td><td>63.6</td>
+            <td class="col-l">49.8</td><td>49.8</td>
+            <td class="col-l">73.9</td><td>74.1</td>
+            <td class="col-l">62.7</td><td>62.7</td>
+          </tr>
+          <tr class="mn">
+            <td class="td-l">&nbsp;&nbsp;+ SDPO</td>
+            <td class="col-l sec">73.0</td><td class="sec">80.2</td>
+            <td class="col-l sec">68.0</td><td>72.4</td>
+            <td class="col-l sec">52.9</td><td class="sec">63.6</td>
+            <td class="col-l">72.2</td><td>75.9</td>
+            <td class="col-l sec">66.5</td><td class="sec">73.0</td>
+          </tr>
+          <tr class="ours mn">
+            <td class="td-l">&nbsp;&nbsp;+ DistIL <em>(Ours)</em></td>
+            <td class="col-l best">75.8</td><td class="best">80.8</td>
+            <td class="col-l best">72.7</td><td class="best">80.8</td>
+            <td class="col-l best">53.3</td><td class="best">66.6</td>
+            <td class="col-l best">74.9</td><td class="sec">76.2</td>
+            <td class="col-l best">69.2</td><td class="best">76.1</td>
+          </tr>
+          <!-- Olmo3-7B -->
+          <tr class="sep">
+            <td class="td-l" style="font-weight:700;color:var(--ink)">Olmo3-7B-Instruct</td>
+            <td colspan="2" class="base col-l">22.8</td>
+            <td colspan="2" class="base col-l">37.7</td>
+            <td colspan="2" class="base col-l">16.2</td>
+            <td colspan="2" class="base col-l">36.7</td>
+            <td colspan="2" class="base col-l">28.4</td>
+          </tr>
+          <tr class="mn">
+            <td class="td-l">&nbsp;&nbsp;+ GRPO <em>(off-policy)</em></td>
+            <td class="col-l">39.7</td><td>56.7</td>
+            <td class="col-l">55.3</td><td>63.3</td>
+            <td class="col-l">35.6</td><td class="best">55.8</td>
+            <td class="col-l">70.9</td><td>75.0</td>
+            <td class="col-l">50.4</td><td>62.7</td>
+          </tr>
+          <tr class="mn">
+            <td class="td-l">&nbsp;&nbsp;+ GRPO <em>(on-policy)</em></td>
+            <td class="col-l">51.4</td><td>57.5</td>
+            <td class="col-l sec">62.7</td><td>62.7</td>
+            <td class="col-l best">49.8</td><td>49.8</td>
+            <td class="col-l sec">73.3</td><td>73.5</td>
+            <td class="col-l">59.3</td><td>60.9</td>
+          </tr>
+          <tr class="mn">
+            <td class="td-l">&nbsp;&nbsp;+ SDPO</td>
+            <td class="col-l sec">70.2</td><td class="sec">79.2</td>
+            <td class="col-l">59.8</td><td class="sec">64.9</td>
+            <td class="col-l sec">49.5</td><td>52.9</td>
+            <td class="col-l">71.8</td><td class="best">78.1</td>
+            <td class="col-l sec">62.8</td><td class="sec">68.8</td>
+          </tr>
+          <tr class="ours mn">
+            <td class="td-l">&nbsp;&nbsp;+ DistIL <em>(Ours)</em></td>
+            <td class="col-l best">72.1</td><td class="best">81.0</td>
+            <td class="col-l best">67.4</td><td class="best">74.5</td>
+            <td class="col-l">47.8</td><td class="sec">55.3</td>
+            <td class="col-l best">73.5</td><td class="sec">76.9</td>
+            <td class="col-l best">65.2</td><td class="best">71.9</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-cap reveal">
+      <strong>Table 1.</strong> Comparison on scientific reasoning benchmarks (SciKnowEval L3).
+      We report best avg@16 within 1h and 5h of wall-clock training on 4&times; NVIDIA H200 GPUs.
+      Average is computed over all four domains.
+    </p>
+
+    <!-- 2×4 training-curve figure grid -->
+    <div class="sci-fig-wrap reveal">
+
+      <!-- Row labels + grid -->
+      <div class="sci-fig-layout">
+
+        <!-- Row 1: Best@16 -->
+        <div class="sci-row-label">
+          <span>Best@16</span>
+        </div>
+        <div class="sci-fig-grid">
+          <div class="fig-item">
+            <div class="sci-col-label">Biology</div>
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/biology/comparison_best.png</span>
+            </div>
+          </div>
+          <div class="fig-item">
+            <div class="sci-col-label">Chemistry</div>
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/chemistry/comparison_best.png</span>
+            </div>
+          </div>
+          <div class="fig-item">
+            <div class="sci-col-label">Materials</div>
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/material/comparison_best.png</span>
+            </div>
+          </div>
+          <div class="fig-item">
+            <div class="sci-col-label">Physics</div>
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/physics/comparison_best.png</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 2: Maj@16 -->
+        <div class="sci-row-label">
+          <span>Maj@16</span>
+        </div>
+        <div class="sci-fig-grid">
+          <div class="fig-item">
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/biology/comparison_maj.png</span>
+            </div>
+          </div>
+          <div class="fig-item">
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/chemistry/comparison_maj.png</span>
+            </div>
+          </div>
+          <div class="fig-item">
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/material/comparison_maj.png</span>
+            </div>
+          </div>
+          <div class="fig-item">
+            <div class="ph sci-ph">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              <span class="ph-path">plots/science/physics/comparison_maj.png</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.sci-fig-layout -->
+
+      <p class="tbl-cap" style="margin-top:.85rem">
+        <strong>Figure 2.</strong> Validation Best@16 (top) and Maj@16 (bottom) of SDPO and
+        DistIL (Ours) across four scientific reasoning domains on Qwen3-8B, plotted against
+        training step. DistIL consistently outperforms SDPO on both metrics across all domains,
+        with gains emerging within the first ~20 steps and sustained throughout training.
+        SDPO exhibits instability under extended training — notably, Best@16 collapses on biology
+        after step 100 and oscillates on chemistry and physics — while DistIL's curves remain smooth.
+      </p>
+    </div><!-- /.sci-fig-wrap -->
+  </div>
+</section>
+
+<!-- ══ CODING ═════════════════════════════════════════ -->
+<section id="coding">
+  <div class="container">
+    <h2 class="section-title">Learning with Rich Environment Feedback: Coding</h2>
+    <p class="section-intro">
+      The coding setting provides rich feedback in the form of execution traces and test outputs.
+      We evaluate on LiveCodeBench v6 (LCBv6), reporting Score and Accuracy at Best@\(k\) and
+      Maj@\(k\) for \(k \in \{2,4,8,16\}\) at temperature \(\tau{=}0.2\), checkpoint at step-80
+      (following SDPO).
+    </p>
+
+    <div class="fig-grid fig-4col reveal">
+      <div class="fig-item">
+        <div class="ph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="ph-label">LCB Score · Maj@k</span>
+          <span class="ph-path">plots/lcb_score_majk_temp0p2.png</span>
+        </div>
+        <p class="fig-cap"><strong>Score · Maj@k,</strong> &tau; = 0.2</p>
+      </div>
+      <div class="fig-item">
+        <div class="ph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="ph-label">LCB Score · Best@k</span>
+          <span class="ph-path">plots/lcb_score_bestk_temp0p2.png</span>
+        </div>
+        <p class="fig-cap"><strong>Score · Best@k,</strong> &tau; = 0.2</p>
+      </div>
+      <div class="fig-item">
+        <div class="ph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="ph-label">LCB Accuracy · Maj@k</span>
+          <span class="ph-path">plots/lcb_acc_majk_temp0p2.png</span>
+        </div>
+        <p class="fig-cap"><strong>Accuracy · Maj@k,</strong> &tau; = 0.2</p>
+      </div>
+      <div class="fig-item">
+        <div class="ph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="ph-label">LCB Accuracy · Best@k</span>
+          <span class="ph-path">plots/lcb_acc_bestk_temp0p2.png</span>
+        </div>
+        <p class="fig-cap"><strong>Accuracy · Best@k,</strong> &tau; = 0.2</p>
+      </div>
+    </div>
+    <p class="tbl-cap reveal" style="margin-top:.9rem">
+      <strong>Figure 1.</strong> LCBv6 evaluation at \(\tau{=}0.2\) for checkpoint at step-80,
+      reporting Score and Accuracy at Best@\(k\) and Maj@\(k\) for \(k \in \{2,4,8,16\}\).
+    </p>
+  </div>
+</section>
+
+<!-- ══ MATH ══════════════════════════════════════════ -->
+<section id="math">
+  <div class="container">
+    <h2 class="section-title">Learning to Solve Very Hard Mathematical Reasoning Problems</h2>
+    <p class="section-intro">
+      We benchmark on AIME24, AIME25, HMMT25, AMC23, and Minerva, reporting average (Avg) and
+      pass (Pass) accuracy. We follow OPSD and report the best checkpoint up to step 100.
+      <strong>Bold</strong> = best; <span style="text-decoration:underline">underline</span> = second best per column.
+    </p>
+
+    <div class="tbl-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th class="th-l" rowspan="2" style="min-width:85px">Model</th>
+            <th class="th-l" rowspan="2" style="min-width:115px">Method</th>
+            <th colspan="2" class="col-l">AIME24</th>
+            <th colspan="2" class="col-l">AIME25</th>
+            <th colspan="2" class="col-l">HMMT25</th>
+            <th colspan="2" class="col-l">AMC23</th>
+            <th colspan="2" class="col-l">Minerva</th>
+          </tr>
+          <tr class="subrow">
+            <th class="col-l">Avg</th><th>Pass</th>
+            <th class="col-l">Avg</th><th>Pass</th>
+            <th class="col-l">Avg</th><th>Pass</th>
+            <th class="col-l">Avg</th><th>Pass</th>
+            <th class="col-l">Avg</th><th>Pass</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Qwen3-4B -->
+          <tr>
+            <td class="td-l grp" rowspan="6">Qwen3-4B</td>
+            <td class="td-l">Base</td>
+            <td class="col-l">61.4</td><td>82.0</td>
+            <td class="col-l">50.3</td><td>69.5</td>
+            <td class="col-l">30.3</td><td>48.8</td>
+            <td class="col-l">93.8</td><td>98.8</td>
+            <td class="col-l">43.2</td><td>48.6</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ SFT</td>
+            <td class="col-l">55.8</td><td>80.9</td>
+            <td class="col-l">43.1</td><td>67.4</td>
+            <td class="col-l">29.7</td><td>46.0</td>
+            <td class="col-l">91.7</td><td>97.0</td>
+            <td class="col-l">41.9</td><td>50.4</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ GRPO</td>
+            <td class="col-l">61.4</td><td>82.0</td>
+            <td class="col-l">50.3</td><td>69.5</td>
+            <td class="col-l">30.3</td><td>48.8</td>
+            <td class="col-l">93.8</td><td>98.8</td>
+            <td class="col-l">43.2</td><td>48.6</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ SDPO</td>
+            <td class="col-l">60.9</td><td class="sec">85.4</td>
+            <td class="col-l">49.6</td><td>74.1</td>
+            <td class="col-l sec">32.8</td><td>50.9</td>
+            <td class="col-l">93.9</td><td class="sec">99.8</td>
+            <td class="col-l sec">43.4</td><td class="sec">52.0</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ OPSD</td>
+            <td class="col-l sec">63.2</td><td class="sec">85.4</td>
+            <td class="col-l sec">51.5</td><td class="sec">76.1</td>
+            <td class="col-l best">33.0</td><td class="sec">54.2</td>
+            <td class="col-l sec">94.5</td><td>99.6</td>
+            <td class="col-l sec">43.4</td><td>51.8</td>
+          </tr>
+          <tr class="ours">
+            <td class="td-l">+ DistIL <em style="font-style:normal;font-size:.8em;color:var(--ink-muted)">(Ours)</em></td>
+            <td class="col-l best">65.3</td><td class="best">87.5</td>
+            <td class="col-l best">55.3</td><td class="best">77.6</td>
+            <td class="col-l best">33.0</td><td class="best">56.6</td>
+            <td class="col-l best">94.8</td><td class="best">100.0</td>
+            <td class="col-l best">44.2</td><td class="best">52.9</td>
+          </tr>
+          <!-- Qwen3-8B -->
+          <tr class="sep">
+            <td class="td-l grp" rowspan="6">Qwen3-8B</td>
+            <td class="td-l">Base</td>
+            <td class="col-l">75.9</td><td>86.8</td>
+            <td class="col-l">66.9</td><td>79.6</td>
+            <td class="col-l">44.7</td><td>65.6</td>
+            <td class="col-l">95.6</td><td class="best">100.0</td>
+            <td class="col-l">48.9</td><td>56.3</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ SFT</td>
+            <td class="col-l">74.2</td><td>85.3</td>
+            <td class="col-l">65.3</td><td>80.7</td>
+            <td class="col-l">42.2</td><td>64.4</td>
+            <td class="col-l">96.3</td><td class="best">100.0</td>
+            <td class="col-l">48.2</td><td>56.2</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ GRPO</td>
+            <td class="col-l">75.9</td><td>86.8</td>
+            <td class="col-l">66.9</td><td>79.6</td>
+            <td class="col-l">44.7</td><td>65.6</td>
+            <td class="col-l">95.6</td><td class="best">100.0</td>
+            <td class="col-l">48.9</td><td>56.3</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ SDPO</td>
+            <td class="col-l best">76.9</td><td>89.5</td>
+            <td class="col-l">68.3</td><td class="sec">84.0</td>
+            <td class="col-l sec">45.6</td><td class="sec">71.2</td>
+            <td class="col-l sec">96.5</td><td class="best">100.0</td>
+            <td class="col-l sec">49.2</td><td>57.7</td>
+          </tr>
+          <tr>
+            <td class="td-l">+ OPSD</td>
+            <td class="col-l sec">76.5</td><td class="best">91.3</td>
+            <td class="col-l sec">69.7</td><td>83.3</td>
+            <td class="col-l">45.5</td><td>68.2</td>
+            <td class="col-l">96.2</td><td class="best">100.0</td>
+            <td class="col-l sec">49.2</td><td class="sec">57.8</td>
+          </tr>
+          <tr class="ours">
+            <td class="td-l">+ DistIL <em style="font-style:normal;font-size:.8em;color:var(--ink-muted)">(Ours)</em></td>
+            <td class="col-l">76.4</td><td class="sec">90.7</td>
+            <td class="col-l best">71.1</td><td class="best">85.0</td>
+            <td class="col-l best">46.4</td><td class="best">71.4</td>
+            <td class="col-l best">96.6</td><td class="best">100.0</td>
+            <td class="col-l best">49.5</td><td class="best">58.4</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tbl-cap reveal">
+      <strong>Table 2.</strong> Performance on mathematical reasoning benchmarks for Qwen3 models.
+      We report the best checkpoint up to step 100 following OPSD.
+    </p>
+  </div>
+</section>
+
+<!-- ══ ABLATION ══════════════════════════════════════ -->
+<section id="ablation">
+  <div class="container">
+    <h2 class="section-title">Ablation Study</h2>
+    <p class="section-intro">
+      We isolate the contribution of DistIL's future-credit term. The CE baseline shares the forward
+      cross-entropy form but performs only local token-wise credit assignment, similar to SDPO/OPSD.
+      We also ablate the number of top-\(k\) tokens used during training.
+    </p>
+
+    <div class="fig-grid fig-2col reveal">
+      <div class="fig-item">
+        <div class="ph" style="aspect-ratio:4/3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="ph-label">DistIL vs. CE — Credit Assignment</span>
+          <span class="ph-path">plots/science/CE_vs_DistIL_Material_Ablation.png</span>
+        </div>
+        <p class="fig-cap">
+          <strong>Figure 2.</strong> DistIL vs. CE on Materials benchmark.
+          CE does local token-wise credit assignment only; DistIL adds full future-credit propagation
+          as given in Eq. 2.
+        </p>
+      </div>
+      <div class="fig-item">
+        <div class="ph" style="aspect-ratio:4/3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <span class="ph-label">Top-k Ablation · Physics</span>
+          <span class="ph-path">plots/science/DistIL_topk_Physics_Ablation.png</span>
+        </div>
+        <p class="fig-cap">
+          <strong>Figure 3.</strong> Avg@16 on Physics benchmark as a function of the number
+          of top-\(k\) tokens used during DistIL training on the Materials benchmark.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ BIBTEX ════════════════════════════════════════ -->
+<section id="bibtex">
+  <div class="container">
+    <h2 class="section-title">BibTeX</h2>
+    <p class="section-intro">Our paper will appear on arXiv soon. The entry below will be updated upon release.</p>
+    <div class="bib" id="bibtex-raw"><button class="copy-btn" id="copy-btn" onclick="copyBib()">Copy</button><span class="bc">% To be updated upon arXiv release</span>
+<span class="bk">@misc</span>{<span class="bv">agrawal2025distil</span>,
+  <span class="bf">title</span>         = {<span class="bv">Reinforcement Learning from Rich Feedback with Distributional DAgger</span>},
+  <span class="bf">author</span>        = {<span class="bv">Rishabh Agrawal and Jacob Fein-Ashley and Paria Rashidinejad</span>},
+  <span class="bf">year</span>          = {<span class="bv">2025</span>},
+  <span class="bf">eprint</span>        = {<span class="bv">TODO</span>},
+  <span class="bf">archivePrefix</span> = {<span class="bv">arXiv</span>},
+  <span class="bf">primaryClass</span>  = {<span class="bv">cs.LG</span>},
+  <span class="bf">url</span>           = {<span class="bv">https://distil.github.io</span>},
+}</div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <p>
+      This page was built using the
+      <a href="https://github.com/eliahuhorwitz/Academic-project-page-template" target="_blank" rel="noopener">Academic Project Page Template</a>,
+      adopted from the <a href="https://nerfies.github.io" target="_blank" rel="noopener">Nerfies</a> project page.
+    </p>
+    <p style="margin-top:.35rem">
+      Licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.
+    </p>
+  </div>
+</footer>
+
+<script>
+function copyBib() {
+  const txt = `@misc{agrawal2025distil,
+  title         = {Reinforcement Learning from Rich Feedback with Distributional DAgger},
+  author        = {Rishabh Agrawal and Jacob Fein-Ashley and Paria Rashidinejad},
+  year          = {2025},
+  eprint        = {TODO},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://distil.github.io},
+}`;
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = document.getElementById('copy-btn');
+    b.textContent = 'Copied!'; b.classList.add('ok');
+    setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('ok'); }, 2000);
+  });
+}
+
+const obs = new IntersectionObserver(es => {
+  es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
