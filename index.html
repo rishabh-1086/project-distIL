@@ -394,11 +394,8 @@
       imitation learning algorithm DAgger, where the learner has local access to an expert distribution
       on states visited by the current policy. This yields a simple forward cross-entropy objective that
       admits a blackbox expert and whose sequence-level gradient conducts rich credit assignment by
-      propagating future expert&ndash;student disagreement back to earlier decisions.
-    </p>
-    <br>
-    <p class="abstract-text">
-      We show that prior RL with self-distillation objectives based on reverse KL or Jensen&ndash;Shannon fail
+      propagating future expert&ndash;student disagreement back to earlier decisions. We show that prior RL 
+      with self-distillation objectives based on reverse KL or Jensen&ndash;Shannon fail
       to guarantee monotonic policy improvement: even when the expert has higher reward, their updates
       may increase probability on worse actions. In contrast, we show that forward cross-entropy admits
       <em>monotonic policy improvement</em> and enjoys guarantees on regret. We further show that our
@@ -416,8 +413,8 @@
   <div class="container">
     <h2 class="section-title">Method</h2>
     <p class="section-intro">
-      DistIL minimizes a forward cross-entropy between a stop-gradient expert conditional distribution
-      (conditioned on feedback \(f\)) and the current policy, summed over all time steps of a sampled
+      DistIL minimizes a forward cross-entropy between a teacher policy (stop-gradient conditional distribution which is conditioned on 
+      feedback \(f\)) and the student policy, summed over all time steps of a sampled
       rollout. This replaces scalar reward signals with token-level distributional supervision while
       remaining compatible with any blackbox feedback source.
     </p>
@@ -425,15 +422,14 @@
     <div class="math-block reveal">
       <div class="math-header">
         <span class="math-tag">DistIL Objective</span>
-        <span class="math-num">(Eq. 1)</span>
       </div>
       $$\mathcal{L}_{\mathrm{DistIL}}(\theta) \;:=\; \mathbb{E}_{x \sim \rho,\; y \sim \pi_\theta(\cdot \mid x)} \!\left[ \sum_{t=1}^{H} H^{\times}\!\Big( \mathsf{sg}\!\left(\pi_{\theta}(\cdot \mid x, y_{1:t-1}, f)\right),\; \pi_\theta(\cdot \mid x, y_{1:t-1}) \Big) \right]$$
       <p class="math-desc">
         Here \(H^{\times}(p,q) = -\mathbb{E}_{a \sim p}[\log q(a)]\) is the cross-entropy,
         \(\mathsf{sg}(\cdot)\) denotes stop-gradient, \(f\) is the rich feedback signal
-        (e.g. execution trace, tool output, or self-evaluation), and \(H\) is the rollout horizon.
-        The expert \(\mathsf{sg}(\pi_\theta(\cdot \mid x, y_{1:t-1}, f))\) is accessed as a
-        <em>blackbox</em>: any feedback-conditioned model may serve as the expert.
+        (e.g. execution trace, tool output), and \(H\) is the rollout horizon.
+        The teacher \(\mathsf{sg}(\pi_\theta(\cdot \mid x, y_{1:t-1}, f))\) may be accessed as a
+        <em>blackbox</em>.
       </p>
     </div>
 
@@ -441,21 +437,20 @@
     <p class="section-intro">
       The sequence-level gradient of \(\mathcal{L}_{\mathrm{DistIL}}\) decomposes into a
       <em>local</em> term (dense token-wise supervision, as in prior self-distillation methods)
-      and a novel <em>future-credit</em> term that propagates downstream expert&ndash;student disagreement
-      back to earlier decisions &mdash; enabling the model to learn that a bad early token choice leads to
+      and a <em>future-credit</em> term that propagates downstream teacher&ndash;student disagreement
+      back to earlier decisions &mdash; better enabling the model to learn that a bad early token choice leads to
       worse futures.
     </p>
 
     <div class="math-block reveal">
       <div class="math-header">
         <span class="math-tag">Policy Gradient Decomposition</span>
-        <span class="math-num">(Eq. 2)</span>
       </div>
       $$\nabla_\theta \mathcal{L}_{\mathrm{DistIL}} \;=\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_t, f)\big),\; \pi_\theta(\cdot \mid s_t) \Big) \right] }_{\text{local credit assignment}} \;+\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta \log \pi_\theta(a_t \mid s_t) \!\left( \sum_{i > t} H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_i, f)\big),\; \pi_\theta(\cdot \mid s_i) \Big) \right) \right] }_{\text{future-credit assignment}}$$
       <p class="math-desc">
         where \(s_t = (x, y_{1:t-1})\). The <em>local</em> term mirrors the gradient of SDPO/OPSD
         and provides dense per-token supervision. The <em>future-credit</em> term is unique to
-        DistIL: it weights \(\log\pi_\theta(a_t\mid s_t)\) by cumulative expert&ndash;student cross-entropy
+        DistIL: it weights \(\log\pi_\theta(a_t\mid s_t)\) by cumulative teacher&ndash;student cross-entropy
         at all later steps \(i > t\), propagating the cost of disagreement back through time.
         Prior methods based on reverse KL or Jensen&ndash;Shannon lack this term and cannot guarantee
         monotonic policy improvement.
@@ -857,7 +852,7 @@
     <p class="section-intro">
       We isolate the contribution of DistIL's future-credit term. The CE baseline shares the forward
       cross-entropy form but performs only local token-wise credit assignment, similar to SDPO/OPSD.
-      We also ablate the number of top-\(k\) tokens used during training.
+      We also ablate the number of top-\(k\) teacher tokens used during training.
     </p>
 
     <div class="fig-grid fig-2col reveal">
@@ -869,8 +864,7 @@
         </div>
         <p class="fig-cap">
           <strong>Figure 3.</strong> DistIL vs. CE on Materials benchmark.
-          CE does local token-wise credit assignment only; DistIL adds full future-credit propagation
-          as given in Eq. 2.
+          CE does local token-wise credit assignment only; DistIL adds full future-credit propagation.
         </p>
       </div>
       <div class="fig-item">
