@@ -332,7 +332,6 @@
 <!-- ══ HEADER ════════════════════════════════════════ -->
 <header>
   <div class="container">
-    <span class="venue-badge fi d1">Preprint 2025</span>
 
     <h1 class="paper-title fi d2">
       Reinforcement Learning from Rich Feedback<br>
@@ -341,9 +340,12 @@
 
     <div class="authors fi d3">
       <div class="author">
-        <a href="#" target="_blank" rel="noopener">Rishabh Agrawal</a>
+        <a href="https://rishabh-1086.github.io" target="_blank" rel="noopener">Rishabh Agrawal</a>
         <div class="author-icons">
-          <a href="mailto:" title="Email">
+          <a href="https://x.com/rishabh_694" target="_blank" rel="noopener" title="X">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.256 5.627 5.908-5.627zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+          <a href="mailto:rishabha@usc.edu" title="Email">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
           </a>
         </div>
@@ -433,7 +435,6 @@
     <div class="math-block reveal">
       <div class="math-header">
         <span class="math-tag">DistIL Objective</span>
-        <span class="math-num">(Eq. 1)</span>
       </div>
       $$\mathcal{L}_{\mathrm{DistIL}}(\theta) \;:=\; \mathbb{E}_{x \sim \rho,\; y \sim \pi_\theta(\cdot \mid x)} \!\left[ \sum_{t=1}^{H} H^{\times}\!\Big( \mathsf{sg}\!\left(\pi_{\theta}(\cdot \mid x, y_{1:t-1}, f)\right),\; \pi_\theta(\cdot \mid x, y_{1:t-1}) \Big) \right]$$
       <p class="math-desc">
@@ -457,7 +458,6 @@
     <div class="math-block reveal">
       <div class="math-header">
         <span class="math-tag">Policy Gradient Decomposition</span>
-        <span class="math-num">(Eq. 2)</span>
       </div>
       $$\nabla_\theta \mathcal{L}_{\mathrm{DistIL}} \;=\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_t, f)\big),\; \pi_\theta(\cdot \mid s_t) \Big) \right] }_{\text{local credit assignment}} \;+\; \underbrace{ \mathbb{E}_{y \sim \pi_\theta}\!\left[ \sum_{t=1}^{H} \nabla_\theta \log \pi_\theta(a_t \mid s_t) \!\left( \sum_{i > t} H^{\times}\!\Big( \mathsf{sg}\!\big(\pi_{\theta}(\cdot \mid s_i, f)\big),\; \pi_\theta(\cdot \mid s_i) \Big) \right) \right] }_{\text{future-credit assignment}}$$
       <p class="math-desc">
@@ -944,14 +944,14 @@
 
 <script>
 function copyBib() {
-  const txt = `@misc{agrawal2025distil,
+  const txt = `@misc{TBA,
   title         = {Reinforcement Learning from Rich Feedback with Distributional DAgger},
   author        = {Rishabh Agrawal and Jacob Fein-Ashley and Paria Rashidinejad},
-  year          = {2025},
-  eprint        = {TODO},
+  year          = {2026},
+  eprint        = {TBA},
   archivePrefix = {arXiv},
   primaryClass  = {cs.LG},
-  url           = {https://distil.github.io},
+  url           = {https://rishabha-1086.github.io/distil},
 }`;
   navigator.clipboard.writeText(txt).then(() => {
     const b = document.getElementById('copy-btn');
