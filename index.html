@@ -873,6 +873,7 @@
       We also ablate the number of top-\(k\) teacher tokens used during training.
     </p>
 
+    <!--
     <div class="fig-grid fig-2col reveal">
       <div class="fig-item">
         <div class="ph" style="aspect-ratio:4/3">
@@ -891,6 +892,23 @@
           <span class="ph-label">Top-k Ablation &middot; Physics</span>
           <span class="ph-path">plots/science/DistIL_topk_Physics_Ablation.png</span>
         </div>
+        <p class="fig-cap">
+          <strong>Figure 4.</strong> Avg@16 on Physics benchmark as a function of the number
+          of top-\(k\) tokens used during DistIL training on the Materials benchmark.
+        </p>
+      </div>
+    </div>
+    -->
+    <div class="fig-grid fig-2col reveal">
+      <div class="fig-item">
+        <img src="plots/science/CE_vs_DistIL_Material_Ablation.png" alt="DistIL vs CE Credit Assignment" />
+        <p class="fig-cap">
+          <strong>Figure 3.</strong> DistIL vs. CE on Materials benchmark.
+          CE does local token-wise credit assignment only; DistIL adds full future-credit propagation.
+        </p>
+      </div>
+      <div class="fig-item">
+        <img src="plots/science/DistIL_topk_Physics_Ablation.png" alt="Top-k Ablation Physics" />
         <p class="fig-cap">
           <strong>Figure 4.</strong> Avg@16 on Physics benchmark as a function of the number
           of top-\(k\) tokens used during DistIL training on the Materials benchmark.
