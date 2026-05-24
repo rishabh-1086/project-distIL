@@ -386,23 +386,22 @@
   <div class="container">
     <h2 class="section-title">Abstract</h2>
     <p class="abstract-text">
-      Reasoning models have advanced rapidly, but the dominant reinforcement learning from verifiable
-      rewards (RLVR) recipe remains surprisingly narrow: sample many responses and reward each with a
-      single bit indicating whether the final answer is correct. Yet many settings provide
-      <em>rich feedback</em>, including execution traces, tool outputs, expert corrections, and model
-      self-evaluations. We study how to use such feedback through a distributional variant of the classic
-      imitation learning algorithm DAgger, where the learner has local access to an expert distribution
-      on states visited by the current policy. This yields a simple forward cross-entropy objective that
-      admits a blackbox expert and whose sequence-level gradient conducts rich credit assignment by
-      propagating future expert&ndash;student disagreement back to earlier decisions. We show that prior RL 
-      with self-distillation objectives based on reverse KL or Jensen&ndash;Shannon fail
-      to guarantee monotonic policy improvement: even when the expert has higher reward, their updates
-      may increase probability on worse actions. In contrast, we show that forward cross-entropy admits
-      <em>monotonic policy improvement</em> and enjoys guarantees on regret. We further show that our
-      objective optimizes a teacher-weighted maximum-likelihood RL lower bound, leading to improved Pass@N.
+      Reasoning models have advanced rapidly, but the dominant reinforcement learning from verifiable rewards (RLVR)
+      recipe remains surprisingly narrow: sample many responses and reward each with a single bit indicating whether
+      the final answer is correct. Yet many settings provide <em>rich feedback</em>em>, including execution traces, tool outputs,
+      expert corrections, and model self-evaluations. We study how to use such feedback through a distributional variant
+      of the classic imitation learning algorithm DAgger, where the learner has local access to an expert distribution on
+      states visited by the current policy. This yields a simple forward cross-entropy objective that admits a blackbox expert
+      and whose sequence-level gradient {conduct rich credit assignment by propagating} future expert&ndash;student disagreement back
+      to earlier decisions. We show that prior RL with self-distillation objectives based on reverse KL or Jensen&ndash;Shannon fail to
+      guarantee monotonic policy improvement: even when the expert has higher reward, their updates may increase probability
+      on worse actions. In contrast, we show that forward cross-entropy admits monotonic policy improvement and enjoys guarantees
+      on regret. We further show that our objective optimizes a teacher-weighted maximum-likelihood RL lower bound, leading to
+      improved Pass@N. Empirically, our approach, DistIL, improves over RLVR and RL with self-distillation baselines across a
+      variety of domains: scientific reasoning, mathematical reasoning, and coding.
     </p>
     <div class="callout reveal">
-      <strong>DistIL</strong> consistently improves over RLVR and RL with self-distillation baselines
+      <strong>DistIL</strong> improves over RLVR and RL with self-distillation baselines
       across scientific reasoning, mathematical reasoning, and coding.
     </div>
   </div>
@@ -619,12 +618,12 @@
         </div>
       </div>
       <p class="tbl-cap" style="margin-top:.85rem">
-        <strong>Figure 2.</strong> Validation Best@16 (top) and Maj@16 (bottom) of SDPO and
-        DistIL (Ours) across four scientific reasoning domains on Qwen3-8B, plotted against
-        training step. DistIL consistently outperforms SDPO on both metrics across all domains,
-        with gains emerging within the first ~20 steps and sustained throughout training.
-        SDPO exhibits instability under extended training &mdash; notably, Best@16 collapses on biology
-        after step 100 and oscillates on chemistry and physics &mdash; while DistIL's curves remain smooth.
+        <strong>Figure 1.</strong> Validation Best@16 (top) and Maj@16 (bottom) over training for RL with self-distillation algorithm
+        SDPO and DistIL (ours) on Qwen3-8B across four scientific reasoning
+        domains: biology, chemistry, materials, and physics. DistIL generally achieves higher validation
+        performance than SDPO across domains and metrics, with gains often appearing early and sustained during
+        training. SDPO exhibits greater variability with longer training, including a pronounced decline in biology
+        Best@16 after roughly 100 steps and larger oscillations in chemistry and physics; DistIL is comparatively more stable.
       </p>
     </div>
   </div>
@@ -694,7 +693,7 @@
       </div>
     </div>
     <p class="tbl-cap reveal" style="margin-top:.9rem">
-      <strong>Figure 1.</strong> LCBv6 evaluation at \(\tau{=}0.2\) for checkpoint at step-80,
+      <strong>Figure 2.</strong> LCBv6 evaluation at \(\tau{=}0.2\) for checkpoint at step-80,
       reporting Score and Accuracy at Best@\(k\) and Maj@\(k\) for \(k \in \{2,4,8,16\}\).
     </p>
   </div>
